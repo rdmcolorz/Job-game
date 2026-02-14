@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Clock, ChevronDown, Briefcase, MapPin, DollarSign, ArrowRight } from 'lucide-react';
+import { Clock, ChevronDown, Briefcase, MapPin, DollarSign, ArrowRight, ExternalLink } from 'lucide-react';
 import useStore from '../store/useStore';
-import JOBS from '../data/jobs';
 
 const STATUSES = [
   { value: 'all', label: 'All', color: 'bg-primary-500' },
@@ -21,7 +20,7 @@ const STATUS_TRANSITIONS = {
 };
 
 export default function ApplicationsPage() {
-  const { applications, updateApplicationStatus } = useStore();
+  const { applications, updateApplicationStatus, jobSnapshots } = useStore();
   const [filterStatus, setFilterStatus] = useState('all');
   const [expandedApp, setExpandedApp] = useState(null);
 
@@ -34,7 +33,8 @@ export default function ApplicationsPage() {
     (a, b) => new Date(b.appliedAt) - new Date(a.appliedAt)
   );
 
-  const getJob = (jobId) => JOBS.find(j => j.id === jobId);
+  // Look up job from persisted snapshots
+  const getJob = (jobId) => jobSnapshots[jobId] || null;
 
   const statusColors = {
     applied: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -90,7 +90,22 @@ export default function ApplicationsPage() {
         ) : (
           sorted.map((app) => {
             const job = getJob(app.jobId);
-            if (!job) return null;
+            if (!job) {
+              // Fallback for applications without a snapshot (legacy data)
+              return (
+                <div key={app.jobId} className="bg-primary-900/50 rounded-xl border border-primary-700/30 p-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-bold text-white">Job #{app.jobId}</h3>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full border capitalize ${statusColors[app.status]}`}>
+                      {app.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-primary-500 mt-1">
+                    Applied {new Date(app.appliedAt).toLocaleDateString()}
+                  </p>
+                </div>
+              );
+            }
             const isExpanded = expandedApp === app.jobId;
             const transitions = STATUS_TRANSITIONS[app.status] || [];
 
@@ -109,6 +124,11 @@ export default function ApplicationsPage() {
                       <span className={`text-xs px-2.5 py-0.5 rounded-full border capitalize ${statusColors[app.status]}`}>
                         {app.status}
                       </span>
+                      {job.source && job.source !== 'mock' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
+                          {job.source}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-sm text-primary-400">
                       <span>{job.company}</span>
@@ -141,22 +161,41 @@ export default function ApplicationsPage() {
                           <Briefcase className="w-3 h-3" />
                           {job.type}
                         </span>
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-primary-800/50 text-primary-300 flex items-center gap-1">
-                          <DollarSign className="w-3 h-3" />
-                          {(job.salaryMin / 1000).toFixed(0)}k - {(job.salaryMax / 1000).toFixed(0)}k
-                        </span>
+                        {(job.salaryMin || job.salaryMax) && (
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-primary-800/50 text-primary-300 flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            {job.salaryMin && job.salaryMax
+                              ? `${(job.salaryMin / 1000).toFixed(0)}k - ${(job.salaryMax / 1000).toFixed(0)}k`
+                              : job.salaryMax
+                                ? `Up to ${(job.salaryMax / 1000).toFixed(0)}k`
+                                : ''}
+                          </span>
+                        )}
+                        {job.url && (
+                          <a
+                            href={job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs px-2.5 py-1 rounded-full bg-primary-800/50 text-primary-300 flex items-center gap-1 hover:text-white transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View original
+                          </a>
+                        )}
                       </div>
 
-                      <div className="flex flex-wrap gap-1.5">
-                        {job.skills.map((skill) => (
-                          <span
-                            key={skill}
-                            className="text-xs px-2 py-0.5 rounded-md bg-primary-800/50 text-primary-500"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
+                      {job.skills && job.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {job.skills.map((skill) => (
+                            <span
+                              key={skill}
+                              className="text-xs px-2 py-0.5 rounded-md bg-primary-800/50 text-primary-500"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       {transitions.length > 0 && (
                         <div>

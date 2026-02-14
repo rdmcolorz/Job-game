@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import JobsPage from './pages/JobsPage';
 import ApplicationsPage from './pages/ApplicationsPage';
 import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -33,6 +34,7 @@ function App() {
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
