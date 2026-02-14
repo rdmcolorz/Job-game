@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, ScrollText, User, LogOut, Swords, Star } from 'lucide-react';
+import { LayoutDashboard, Briefcase, ScrollText, User, LogOut, Swords, Star, Settings } from 'lucide-react';
 import useStore from '../../store/useStore';
 import { calculateLevel, getLevelTitle } from '../../utils/gamification';
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/jobs', icon: Briefcase, label: 'Quest Board' },
   { to: '/applications', icon: ScrollText, label: 'Quest Log' },
   { to: '/profile', icon: User, label: 'Profile' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function Sidebar({ mobile = false, onClose }) {

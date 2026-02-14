@@ -39,6 +39,16 @@ const useStore = create(
 
       // --- APPLICATIONS ---
       applications: [],       // { jobId, status, appliedAt, updatedAt }
+      // Snapshots of jobs at time of application, keyed by jobId.
+      // This ensures ApplicationsPage can display job details even if
+      // the job disappears from the live API feed.
+      jobSnapshots: {},
+
+      // --- API SETTINGS ---
+      apiSettings: {
+        adzunaAppId: '',
+        adzunaAppKey: '',
+      },
 
       // --- UI STATE ---
       notifications: [],      // { id, type, message, timestamp }
@@ -156,7 +166,8 @@ const useStore = create(
       // ============================
       // APPLICATION ACTIONS
       // ============================
-      applyToJob: (jobId) => {
+      // jobData: the full job object to snapshot for later display
+      applyToJob: (jobId, jobData) => {
         const state = get();
 
         // Prevent duplicate applications
@@ -176,10 +187,18 @@ const useStore = create(
 
         const newAppsToday = isFirstToday ? 1 : state.applicationsToday + 1;
 
+        // Store a snapshot of the job so ApplicationsPage can always
+        // display its details, even if the API stops returning it.
+        const newSnapshots = { ...state.jobSnapshots };
+        if (jobData) {
+          newSnapshots[jobId] = jobData;
+        }
+
         set({
           applications: [...state.applications, newApp],
           applicationsToday: newAppsToday,
           lastApplicationDate: today,
+          jobSnapshots: newSnapshots,
         });
 
         // Base XP for applying
@@ -255,6 +274,13 @@ const useStore = create(
         set({
           notifications: get().notifications.filter(n => n.id !== id),
         });
+      },
+
+      // ============================
+      // API SETTINGS ACTIONS
+      // ============================
+      updateApiSettings: (updates) => {
+        set({ apiSettings: { ...get().apiSettings, ...updates } });
       },
 
       // ============================
