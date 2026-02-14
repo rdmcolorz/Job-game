@@ -243,12 +243,17 @@ export async function fetchAllJobs({ search = '', apiSettings = {} } = {}) {
   // Always try Remotive (free, no key)
   sources.push(fetchRemotiveJobs({ search, limit: 30 }));
 
-  // Adzuna if credentials are configured
-  if (apiSettings.adzunaAppId && apiSettings.adzunaAppKey) {
+  // Adzuna: env vars (from .env) take priority, then fall back to
+  // values entered on the Settings page. This lets you set credentials
+  // once in .env without re-entering them in the UI.
+  const adzunaAppId = import.meta.env.VITE_ADZUNA_APP_ID || apiSettings.adzunaAppId;
+  const adzunaAppKey = import.meta.env.VITE_ADZUNA_APP_KEY || apiSettings.adzunaAppKey;
+
+  if (adzunaAppId && adzunaAppKey) {
     sources.push(fetchAdzunaJobs({
       search,
-      appId: apiSettings.adzunaAppId,
-      appKey: apiSettings.adzunaAppKey,
+      appId: adzunaAppId,
+      appKey: adzunaAppKey,
     }));
   }
 

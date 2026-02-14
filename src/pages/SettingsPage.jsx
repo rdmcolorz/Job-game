@@ -6,6 +6,11 @@ export default function SettingsPage() {
   const { apiSettings, updateApiSettings } = useStore();
   const [saved, setSaved] = useState(false);
 
+  // Check if credentials are provided via .env file
+  const envAppId = import.meta.env.VITE_ADZUNA_APP_ID || '';
+  const envAppKey = import.meta.env.VITE_ADZUNA_APP_KEY || '';
+  const hasEnvCredentials = !!(envAppId && envAppKey);
+
   const handleChange = (field, value) => {
     updateApiSettings({ [field]: value });
     setSaved(true);
@@ -70,7 +75,12 @@ export default function SettingsPage() {
               <p className="text-xs text-primary-400">All job types — Free tier, requires API key</p>
             </div>
           </div>
-          {apiSettings.adzunaAppId && apiSettings.adzunaAppKey ? (
+          {hasEnvCredentials ? (
+            <span className="flex items-center gap-1.5 text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-500/30">
+              <Check className="w-3 h-3" />
+              Active via .env
+            </span>
+          ) : apiSettings.adzunaAppId && apiSettings.adzunaAppKey ? (
             <span className="flex items-center gap-1.5 text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-500/30">
               <Check className="w-3 h-3" />
               Configured
@@ -96,6 +106,13 @@ export default function SettingsPage() {
           </a>
         </p>
 
+        {hasEnvCredentials && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-sm text-emerald-400 mb-4">
+            Credentials loaded from <code className="bg-emerald-500/10 px-1.5 py-0.5 rounded text-xs">.env</code> file.
+            The fields below are only used as a fallback when .env values are empty.
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-primary-300 mb-1">App ID</label>
@@ -103,8 +120,9 @@ export default function SettingsPage() {
               type="text"
               value={apiSettings.adzunaAppId || ''}
               onChange={(e) => handleChange('adzunaAppId', e.target.value.trim())}
-              className="w-full px-4 py-3 bg-primary-800/50 border border-primary-600/30 rounded-xl text-white placeholder-primary-500 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all font-mono text-sm"
-              placeholder="Your Adzuna App ID"
+              disabled={hasEnvCredentials}
+              className="w-full px-4 py-3 bg-primary-800/50 border border-primary-600/30 rounded-xl text-white placeholder-primary-500 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              placeholder={hasEnvCredentials ? 'Set via .env' : 'Your Adzuna App ID'}
             />
           </div>
           <div>
@@ -113,8 +131,9 @@ export default function SettingsPage() {
               type="password"
               value={apiSettings.adzunaAppKey || ''}
               onChange={(e) => handleChange('adzunaAppKey', e.target.value.trim())}
-              className="w-full px-4 py-3 bg-primary-800/50 border border-primary-600/30 rounded-xl text-white placeholder-primary-500 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all font-mono text-sm"
-              placeholder="Your Adzuna App Key"
+              disabled={hasEnvCredentials}
+              className="w-full px-4 py-3 bg-primary-800/50 border border-primary-600/30 rounded-xl text-white placeholder-primary-500 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              placeholder={hasEnvCredentials ? 'Set via .env' : 'Your Adzuna App Key'}
             />
           </div>
         </div>
@@ -128,10 +147,20 @@ export default function SettingsPage() {
       </div>
 
       {/* Data note */}
-      <div className="bg-primary-800/30 rounded-xl p-4 border border-primary-700/20 text-xs text-primary-500">
-        <strong className="text-primary-400">Note:</strong> API credentials are stored locally
-        in your browser and are never sent to any server except the respective API provider.
-        Job listings are cached for 15 minutes to reduce API calls.
+      <div className="bg-primary-800/30 rounded-xl p-4 border border-primary-700/20 text-xs text-primary-500 space-y-2">
+        <p>
+          <strong className="text-primary-400">Recommended:</strong> Set your credentials in the{' '}
+          <code className="bg-primary-700/50 px-1.5 py-0.5 rounded">.env</code> file at the project root:
+        </p>
+        <pre className="bg-primary-900/50 rounded-lg p-3 text-primary-300 overflow-x-auto">
+{`VITE_ADZUNA_APP_ID=your_app_id
+VITE_ADZUNA_APP_KEY=your_app_key`}
+        </pre>
+        <p>
+          Credentials in <code className="bg-primary-700/50 px-1.5 py-0.5 rounded">.env</code> are
+          gitignored and never committed. The form fields above serve as a browser-only fallback.
+          Job listings are cached for 15 minutes to reduce API calls.
+        </p>
       </div>
     </div>
   );
