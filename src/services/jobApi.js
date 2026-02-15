@@ -6,13 +6,10 @@
 // Sources:
 //   1. Remotive API  — Free, no key. Remote-focused jobs.
 //   2. Adzuna API    — Free tier (requires app_id + app_key).
-//   3. Mock data     — Always available fallback.
 //
 // All sources are normalized into the same shape used
 // throughout the app (see normalizeJob below).
 // ============================================
-
-import MOCK_JOBS from '../data/jobs';
 
 // --- Internal job schema ---
 // Every job object in the app has this shape regardless of source:
@@ -29,7 +26,7 @@ import MOCK_JOBS from '../data/jobs';
 //   category:    string,
 //   postedDays:  number,
 //   url:         string | null,  // External link to the real listing
-//   source:      string,         // 'remotive' | 'adzuna' | 'mock'
+//   source:      string,         // 'remotive' | 'adzuna'
 // }
 
 // ============================================
@@ -106,15 +103,6 @@ function normalizeAdzunaJob(job) {
     postedDays: daysSince(job.created),
     url: job.redirect_url || null,
     source: 'adzuna',
-  };
-}
-
-function normalizeMockJob(job) {
-  return {
-    ...job,
-    id: `mock-${job.id}`,
-    url: null,
-    source: 'mock',
   };
 }
 
@@ -204,18 +192,32 @@ export async function fetchAdzunaJobs({
   if (cached) return cached;
 
   try {
+    const safeSearch = search.trim();
+    const safeLocation = location.trim();
     const params = new URLSearchParams({
       app_id: appId,
       app_key: appKey,
       results_per_page: String(resultsPerPage),
-      what: search,
-      content_type: 'application/json',
     });
-    if (location) params.set('where', location);
 
-    const url = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?${params}`;
+    if (safeSearch) params.set('what', safeSearch);
+    if (safeLocation) params.set('where', safeLocation);
+
+    // Adzuna can return 400 for empty queries.
+    // If no filters are provided, request a broad default term.
+    if (!safeSearch && !safeLocation) {
+      params.set('what', 'software engineer');
+    }
+
+    const adzunaBaseUrl = import.meta.env.DEV
+      ? '/api/adzuna'
+      : 'https://api.adzuna.com';
+    const url = `${adzunaBaseUrl}/v1/api/jobs/${country}/search/${page}?${params}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Adzuna API: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Adzuna API: ${res.status}${body ? ` - ${body}` : ''}`);
+    }
 
     const data = await res.json();
     const jobs = (data.results || []).map(normalizeAdzunaJob);
@@ -225,11 +227,6 @@ export async function fetchAdzunaJobs({
     console.warn('Adzuna fetch failed:', err.message);
     return [];
   }
-}
-
-// --- Mock data ---
-export function getMockJobs() {
-  return MOCK_JOBS.map(normalizeMockJob);
 }
 
 // ============================================
@@ -259,18 +256,7 @@ export async function fetchAllJobs({ search = '', apiSettings = {} } = {}) {
 
   // Fire all API calls in parallel
   const results = await Promise.all(sources);
-  let allJobs = results.flat();
-
-  // Always include mock data as a supplement (so new users see jobs immediately)
-  const mockJobs = getMockJobs();
-
-  // If we got real results, put them first, mock jobs at the end
-  if (allJobs.length > 0) {
-    allJobs = [...allJobs, ...mockJobs];
-  } else {
-    // API calls returned nothing — rely on mock data
-    allJobs = mockJobs;
-  }
+  const allJobs = results.flat();
 
   // Deduplicate by normalized title + company
   const seen = new Set();
